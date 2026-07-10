@@ -1,0 +1,22 @@
+{
+  "name": "turtle-soup-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "海龟汤（情境推理）游戏，支持 OpenAI、DeepSeek、Groq 等任意 OpenAI 兼容 AI 担任主持人",
+  "scripts": {
+    "dev": "concurrently -n SERVER,CLIENT -c magenta,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix server run build && npm --prefix client run build",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "start": "npm --prefix server run start",
+    "expand-puzzles": "npx tsx server/src/scripts/expandPuzzles.ts",
+    "proxy": "npx tsx server/src/scripts/codebuddy-proxy.ts",
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
