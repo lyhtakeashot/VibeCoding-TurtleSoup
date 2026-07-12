@@ -96,9 +96,10 @@ export interface SubmissionItem {
 }
 
 export const DIFFICULTY_META: Record<Difficulty, { label: string; max: number; color: string }> = {
-  easy: { label: '简单', max: 10, color: '#34d399' },
-  medium: { label: '中等', max: 15, color: '#fbbf24' },
-  hard: { label: '困难', max: 20, color: '#f87171' },
+  easy: { label: '简单', max: 20, color: '#34d399' },
+  medium: { label: '中等', max: 30, color: '#fbbf24' },
+  hard: { label: '困难', max: 40, color: '#f87171' },
+  unlimited: { label: '∞', max: 999, color: '#60a5fa' },
 };
 
 export const ANSWER_META: Record<AnswerKind, { label: string; color: string }> = {

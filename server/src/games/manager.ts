@@ -40,7 +40,7 @@ function loadBasePuzzles(): Puzzle[] {
   }
 }
 
-const MAX_Q_BY_DIFF: Record<Difficulty, number> = { easy: 10, medium: 15, hard: 20 };
+const MAX_Q_BY_DIFF: Record<Difficulty, number> = { easy: 20, medium: 30, hard: 40, unlimited: 999 };
 
 function submissionToPuzzle(s: {
   id: string;

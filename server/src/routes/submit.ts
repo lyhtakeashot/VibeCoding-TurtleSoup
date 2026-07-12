@@ -27,7 +27,7 @@ submitRouter.post('/', (req, res) => {
     title: String(b.title || ''),
     surface: String(b.surface),
     solution: String(b.solution),
-    difficulty: (['easy', 'medium', 'hard'].includes(b.difficulty) ? b.difficulty : 'medium') as Difficulty,
+    difficulty: (['easy', 'medium', 'hard', 'unlimited'].includes(b.difficulty) ? b.difficulty : 'medium') as Difficulty,
     hints: Array.isArray(b.hints) ? b.hints.map(String) : [],
     tags: Array.isArray(b.tags) ? b.tags.map(String) : [],
     author: String(b.author || '匿名作者'),

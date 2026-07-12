@@ -1,0 +1,21 @@
+---
+description: 预览前端之前，自动检查并启动开发服务器
+alwaysApply: true
+enabled: true
+---
+
+开发服务器自动检测规范
+
+1. 当需要打开前端预览（http://localhost:5173）时，先检测服务器是否已在运行。
+2. 如果连接被拒绝（ERR_CONNECTION_REFUSED），说明前端开发服务器未运行，必须自动执行以下命令启动前端：
+   ```
+   set PATH=C:\Users\lyh\.workbuddy\binaries\node\versions\22.22.2;%PATH% && cd /d "d:\Desktop\VibeCoding\海龟汤" && npm run dev:client
+   ```
+3. 如果前端页面能打开，但汤面选择列表为空或 API 请求失败（症状：汤面列表显示"该难度暂无题目"、网络请求返回 502/503 或连接被拒），说明后端开发服务器未运行，必须自动执行以下命令启动后端：
+   ```
+   set PATH=C:\Users\lyh\.workbuddy\binaries\node\versions\22.22.2;%PATH% && cd /d "d:\Desktop\VibeCoding\海龟汤" && npm run dev:server
+   ```
+4. 启动命令在项目根目录运行，使用完整 node 路径因为 CodeBuddy 终端可能没有 npm 在 PATH 中。
+5. 等待约 5 秒让服务器就绪后，再尝试打开预览。
+6. 如果多次失败，告知用户检查端口占用或依赖安装情况。
+7. 前端 (Vite :5173) 通过 proxy 将 /api/* 转发到后端 (:3001)，所以两个服务都需要运行才能正常工作。

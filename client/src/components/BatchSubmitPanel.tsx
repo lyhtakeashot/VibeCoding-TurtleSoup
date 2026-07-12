@@ -295,7 +295,7 @@ export function BatchSubmitPanel() {
                         onChange={(e) => updatePuzzle(pIdx, { difficulty: e.target.value as Difficulty })}
                         className={`${inputCls} mt-1`}
                       >
-                        {(['easy', 'medium', 'hard'] as Difficulty[]).map((d) => (
+                        {(['easy', 'medium', 'hard', 'unlimited'] as Difficulty[]).map((d) => (
                           <option key={d} value={d}>
                             {DIFFICULTY_META[d].label}
                           </option>

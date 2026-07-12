@@ -45,7 +45,7 @@ editorRouter.put('/puzzles/:id', (req, res) => {
     if (b.title !== undefined) sub.title = String(b.title);
     if (b.surface !== undefined) sub.surface = String(b.surface);
     if (b.solution !== undefined) sub.solution = String(b.solution);
-    if (b.difficulty !== undefined && ['easy', 'medium', 'hard'].includes(b.difficulty))
+    if (b.difficulty !== undefined && ['easy', 'medium', 'hard', 'unlimited'].includes(b.difficulty))
       sub.difficulty = b.difficulty;
     if (Array.isArray(b.tags)) sub.tags = b.tags.map(String);
     if (Array.isArray(b.hints)) sub.hints = b.hints.map(String);
@@ -65,7 +65,7 @@ editorRouter.put('/puzzles/:id', (req, res) => {
   if (b.title !== undefined) p.title = String(b.title);
   if (b.surface !== undefined) p.surface = String(b.surface);
   if (b.solution !== undefined) p.solution = String(b.solution);
-  if (b.difficulty !== undefined && ['easy', 'medium', 'hard'].includes(b.difficulty))
+  if (b.difficulty !== undefined && ['easy', 'medium', 'hard', 'unlimited'].includes(b.difficulty))
     p.difficulty = b.difficulty;
   if (Array.isArray(b.tags)) p.tags = b.tags.map(String);
   if (Array.isArray(b.hints)) p.hints = b.hints.map(String);
@@ -118,7 +118,7 @@ editorRouter.put('/submissions/:id', (req, res) => {
   if (b.title !== undefined) sub.title = String(b.title);
   if (b.surface !== undefined) sub.surface = String(b.surface);
   if (b.solution !== undefined) sub.solution = String(b.solution);
-  if (b.difficulty !== undefined && ['easy', 'medium', 'hard'].includes(b.difficulty))
+  if (b.difficulty !== undefined && ['easy', 'medium', 'hard', 'unlimited'].includes(b.difficulty))
     sub.difficulty = b.difficulty;
   if (Array.isArray(b.tags)) sub.tags = b.tags.map(String);
   if (Array.isArray(b.hints)) sub.hints = b.hints.map(String);

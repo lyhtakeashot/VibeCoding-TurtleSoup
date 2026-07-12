@@ -1,4 +1,4 @@
-export type Difficulty = 'easy' | 'medium' | 'hard';
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'unlimited';
 export type AnswerKind = 'yes' | 'no' | 'irrelevant' | 'partial';
 
 export interface Puzzle {

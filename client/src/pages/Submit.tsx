@@ -153,9 +153,9 @@ export function Submit() {
               onChange={(e) => setDifficulty(e.target.value as Difficulty)}
               className={`${inputCls} mt-1`}
             >
-              {(['easy', 'medium', 'hard'] as Difficulty[]).map((d) => (
+              {(['easy', 'medium', 'hard', 'unlimited'] as Difficulty[]).map((d) => (
                 <option key={d} value={d}>
-                  {DIFFICULTY_META[d].label}（{DIFFICULTY_META[d].max}问）
+                  {DIFFICULTY_META[d].label}（{d === 'unlimited' ? '不限' : `${DIFFICULTY_META[d].max}问`}）
                 </option>
               ))}
             </select>

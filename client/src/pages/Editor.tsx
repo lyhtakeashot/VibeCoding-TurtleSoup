@@ -198,7 +198,7 @@ export function Editor() {
                       onChange={(e) => updateEditForm('difficulty', e.target.value)}
                       className={`${inputCls} w-24`}
                     >
-                      {(['easy', 'medium', 'hard'] as Difficulty[]).map((d) => (
+                      {(['easy', 'medium', 'hard', 'unlimited'] as Difficulty[]).map((d) => (
                         <option key={d} value={d}>{DIFFICULTY_META[d].label}</option>
                       ))}
                     </select>

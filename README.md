@@ -1,111 +1,160 @@
 # 海龟汤 · AI 主持
 
-腾讯云黑客松 **AI 创作大赛** 参赛作品：一款 Web H5 情境推理（海龟汤）游戏。
-由 **腾讯混元 Hunyuan** 担任主持人，规则引擎直答 + AI 增强，暗色悬疑推理风，
-支持单人沉浸推理、多人实时竞速、玩家投稿审核与推理进度图谱可视化。
+一款 Web 全栈情境推理（海龟汤）游戏。AI 担任主持人，规则引擎兜底，支持 **单人沉浸推理、多人竞速、多人推理共识** 三种模式。
 
 ## 特性
 
-- 🕵️ **单人推理**：向主持人提「是/否」类问题，流式打字机回答，可请求渐进提示，达上限后提交推理/揭晓。
-- ⚡ **多人竞速**：昵称进房，共享同一汤面与问答，先猜中汤底者胜（Socket.IO 实时同步）。
-- 🧠 **规则引擎 + 混元增强**：直球问题零 token 命中预置答案；模糊问题在开启混元时交由模型作答。
-- 🕸️ **推理进度图谱**：每条 Q/A 以时间线节点呈现，按「是/否/无关」着色，点击查看详情。
-- ✍️ **玩家投稿 + 审核台**：提交自创题目，管理员口令审核通过后并入题库。
-- 🎨 **AI 生成配图**：每道汤面配暗色悬疑封面（已生成于 `client/public/images`）。
-
-## 默认运行模式（纯规则，零 token）
-
-当前 `USE_AI=false` 且未配置密钥，系统走**纯规则主持人**：直球问题查预置答案表，
-模糊问题走通用兜底，演示完全可跑、不消耗 token。混元接口已保留，拿到密钥后
-在 `.env` 设 `USE_AI=true` 即一键升级为 AI 增强，无需改代码。
+- 🕵️ **单人推理**：向 AI 主持人提问（是/否），SSE 流式打字机回答，可请求渐进提示，达到上限后提交推理
+- ⚡ **多人竞速**：昵称进房，共享汤面与问答，先猜中汤底者胜（Socket.IO 实时同步）
+- 💬 **多人推理共识**：多人协作推理模式，≥2 人达成共识即算通过
+- 🧠 **规则引擎 + AI 增强**：直球问题零 token 命中预置答案；模糊问题交由 AI 流式作答
+- 🔄 **多 AI 提供商**：支持 OpenAI / DeepSeek / Groq / Ollama 等任意 OpenAI 兼容 API，首页可视化切换配置
+- 🧪 **测试模式**：启用 CodeBuddy 内置 AI，无需外部 Key 即可体验完整功能
+- ✍️ **玩家投稿 + 审核台**：提交自创题目，管理员口令审核通过后并入题库
+- 🎨 **AI 生成配图**：每道汤面配有暗色悬疑封面
 
 ## 技术栈
 
-- 前端：React 18 + Vite + TypeScript + Tailwind CSS + zustand + @xyflow/react
-- 后端：Node.js + Express + Socket.IO + TypeScript（BFF 单体，托管前端静态资源 + 混元代理）
-- AI：腾讯云混元 `hunyuan-lite`（通过后端代理保护密钥）
+| 层 | 技术 |
+|---|---|
+| 前端 | React 18 · TypeScript · Vite 5 · Tailwind CSS 3.4 · Zustand 5 · react-router-dom v6 · socket.io-client |
+| 后端 | Node.js · Express 4 · Socket.IO · TypeScript · tsx |
+| AI | OpenAI 兼容 API（OpenAI / DeepSeek / Groq / Ollama 等）+ CodeBuddy 内置 AI 测试模式 |
+| 数据 | JSON 文件存储（`server/data/`），零外部数据库依赖 |
 
 ## 目录结构
 
 ```
 海龟汤/
-├── package.json          # 根 monorepo 脚本（dev/build 同时驱动前后端）
-├── .env.example          # 环境变量模板
-├── server/               # 后端（Express + Socket.IO + 混元代理 + 规则引擎）
-│   └── src/  config / host / judge / hunyuan / games / routes / socket
-│   └── data/ puzzles.json（题库）, submissions.json（投稿）
-├── client/               # 前端（页面 + 组件 + hooks + store）
-│   └── public/images/    # AI 生成的汤面配图 p1~p9
-└── README.md
+├── package.json              # monorepo 根脚本（dev/build 同时驱动前后端）
+├── .env.example              # 环境变量模板
+├── server/
+│   ├── src/
+│   │   ├── index.ts          # Express 入口：路由 + Socket.IO + 静态托管 + 全局错误处理
+│   │   ├── host.ts           # 主持人引擎：规则匹配 → 历史去重 → AI 增强 → 兜底
+│   │   ├── judge.ts          # 裁判引擎：猜测结果判定
+│   │   ├── config.ts         # 静态配置（端口、CORS、ADMIN_PASS）
+│   │   ├── runtimeConfig.ts  # 运行时配置（从 api-config.json 动态加载 AI 配置）
+│   │   ├── types.ts          # 共享类型定义
+│   │   ├── ai/               # AI 集成（OpenAI 兼容客户端 + 提示词 + CodeBuddy 测试模式 + 题目生成）
+│   │   ├── games/            # 游戏逻辑（全局管理器 + 房间 + 单人会话 + 投稿管理）
+│   │   ├── routes/           # REST API（题库、投稿、房间、配置、编辑器）
+│   │   ├── socket/           # Socket.IO 事件处理（房间 CRUD + 提问 + 猜测 + 共识 + 聊天）
+│   │   └── scripts/          # 辅助脚本（题库扩展、CodeBuddy 代理）
+│   └── data/
+│       ├── puzzles.json      # 题库
+│       ├── submissions.json  # 用户投稿
+│       └── api-config.json   # 运行时 AI 配置
+├── client/
+│   ├── src/
+│   │   ├── App.tsx           # 路由：/ /solo /multi /discuss /result /submit /admin /editor
+│   │   ├── api.ts            # 前端 API 层：REST + SSE 流式
+│   │   ├── socket.ts         # Socket.IO 单例
+│   │   ├── index.css         # Tailwind + 暗色悬疑主题
+│   │   ├── pages/            # 页面组件（9 个）
+│   │   ├── components/       # 通用组件（选择器、聊天面板、引导弹窗、错误边界等）
+│   │   ├── hooks/            # 游戏 Hook（单人 SSE / 多人 Socket / 推理共识）
+│   │   ├── store/            # Zustand 全局状态
+│   │   └── types/            # 前端类型定义
+│   └── public/images/        # AI 生成的汤面配图
+└── .env                      # 本地环境变量（不提交）
 ```
 
 ## 本地运行
 
-> 需要 Node.js 18+。下列命令以 `npm.cmd` 为例（PowerShell 环境请使用 `npm.cmd`）。
+> 需要 Node.js 18+
 
-1. 安装依赖（根 / server / client 三处）：
+```bash
+# 1. 安装依赖（根 / server / client 三处）
+npm run install:all
 
-   ```bash
-   npm install
-   npm install --prefix server
-   npm install --prefix client
-   ```
+# 2. 配置环境变量（可选，默认纯规则模式）
+cp .env.example .env
+# 编辑 .env：填入 AI_API_KEY 并将 USE_AI 改为 true 以启用 AI 增强
 
-2. 配置环境变量（可选，已有 `.env` 默认纯规则模式）：
+# 3. 开发模式（前后端同时启动，热更新）
+npm run dev
+```
 
-   ```bash
-   cp .env.example .env
-   # 编辑 .env：填入 TENCENT_SECRET_ID/KEY 并将 USE_AI 改为 true 以启用混元
-   ```
+- 前端：http://localhost:5173
+- 后端：http://localhost:3001（Vite 已代理 `/api` 与 `/socket.io`）
 
-3. 开发模式（前后端同时启动，前端热更新）：
+### 零配置体验
 
-   ```bash
-   npm run dev
-   ```
+即使不配置任何 AI Key，也可以：
 
-   - 前端：http://localhost:5173
-   - 后端：http://localhost:3001 （Vite 已代理 `/api` 与 `/socket.io`）
+1. 启动项目后，在首页打开 **测试模式（Test Mode）** 开关
+2. 使用 CodeBuddy 内置 AI，零配置体验完整功能
 
-4. 仅启动后端（用 tsx 热重载）：
+## 页面路由
 
-   ```bash
-   npm run dev:server
-   ```
+| 路由 | 页面 | 说明 |
+|------|------|------|
+| `/` | 首页 | 选择模式、配置 AI、切换测试模式 |
+| `/solo` | 单人推理 | 选择汤面 → 提问 → 猜谜 |
+| `/multi` | 多人竞速 | 创建/加入房间，抢先猜中者胜 |
+| `/discuss` | 多人推理共识 | 协作推理，≥2 人通过即成功 |
+| `/result` | 推理结果 | 结果展示 |
+| `/submit` | 投稿 | 提交自创题目 |
+| `/admin` | 审核台 | 管理员审核投稿 |
+| `/editor` | 题库编辑器 | 管理题库 |
+
+## API 接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/solo/start` | 创建单人会话 |
+| GET | `/api/solo/ask` | SSE 流式提问 |
+| POST | `/api/solo/hint` | 获取渐进提示 |
+| POST | `/api/solo/guess` | 提交推理 |
+| GET | `/api/puzzles` | 题库列表（可按 `?difficulty=` 过滤） |
+| POST | `/api/puzzles/generate` | AI 生成新题目 |
+| POST | `/api/submissions` | 玩家投稿 |
+| POST | `/api/submissions/:id/approve` | 审核通过（需口令） |
+| POST | `/api/submissions/:id/reject` | 审核拒绝 |
+| GET | `/api/rooms` | 活跃房间列表 |
+| GET/POST | `/api/config` | 获取/更新运行时 AI 配置 |
+| WS | `room:create / join / ask / guess` | 多人房间 Socket 事件 |
+
+## 环境变量
+
+```env
+# AI 配置
+AI_API_KEY=                  # OpenAI 兼容 API Key
+AI_BASE_URL=https://api.openai.com/v1
+AI_MODEL=gpt-3.5-turbo
+USE_AI=false                 # 是否启用 AI（false=纯规则零 token）
+
+# 服务配置
+PORT=3001
+CLIENT_ORIGIN=http://localhost:5173
+
+# 管理口令
+ADMIN_PASS=turtle-admin-2026
+
+# AI 上下文轮次上限
+MAX_CONTEXT_ROUNDS=12
+```
 
 ## 生产构建
 
 ```bash
-npm run build          # 编译 server + 构建 client 到 client/dist
-npm start              # 后端在 3001 端口托管前端静态资源，单域名访问
+npm run build          # 编译 server + 构建 client
+npm start              # 后端在 3001 端口托管前端，单域名访问
 ```
 
-之后访问 http://localhost:3001 即可。
+访问 http://localhost:3001 即可。
 
-## 关键接口
+## 部署
 
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| POST | `/api/solo/start` | 创建单人会话，返回 sessionId 与题目 |
-| GET  | `/api/solo/ask` | SSE 流式提问（逐字推送主持人回答） |
-| POST | `/api/solo/hint` | 揭示下一条渐进提示 |
-| POST | `/api/solo/guess` | 提交推理，判定是否猜中 |
-| GET  | `/api/puzzles` | 题库列表（可按 `?difficulty=` 过滤） |
-| POST | `/api/submissions` | 玩家投稿 |
-| GET/POST | `/api/submissions/:id/approve\|reject` | 审核（需 `?pass=` 或 body `pass`） |
-| WS  | `room:create / room:join / room:ask / room:guess` | 多人房间事件 |
+后端编译后托管前端静态资源，单进程即可运行：
 
-## 部署到腾讯云（演示收尾阶段）
+- **任意 VPS**：上传代码 → `npm run install:all` → `npm run build` → `npm start`，用 Nginx/Caddy 反代 3001
+- **CloudBase 云托管**：构建命令 `npm run build`，启动命令 `npm start`，监听 `PORT` 环境变量
+- AI 密钥仅存在于服务端 `.env`，前端永不持有
 
-后端编译后托管前端静态资源，单进程即可运行，可直接部署到：
+## 设计说明
 
-- **腾讯云轻量应用服务器**：上传代码，`npm install`（三处）、`npm run build`、`npm start`，
-  用 Nginx/Caddy 反代 3001 或直接以 `PORT=80` 运行。
-- **CloudBase 云托管**：以 `npm run build && npm start` 为构建/启动命令，监听 `PORT`。
-
-密钥仅存在于服务端 `.env`，前端永不持有。
-
-## 说明
-
-- 不做玩家账号/登录认证：多人昵称进房、投稿填作者名、审核台单一口令。
-- 多人房间为内存态，重启可重建（黑客松演示足够）。
+- 不做玩家账号/登录认证：多人昵称进房、投稿填作者名、审核台单一口令
+- 多人房间为内存态，重启即释放（演示/小规模使用足够）
+- 默认 `USE_AI=false` 走纯规则引擎，零 token 即可演示；开启 AI 一键升级无需改代码

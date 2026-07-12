@@ -10,7 +10,7 @@ export const puzzlesRouter = Router();
 puzzlesRouter.get('/', (req, res) => {
   const difficulty = req.query.difficulty as Difficulty | undefined;
   let puzzles = manager.getPlayablePuzzles();
-  if (difficulty && ['easy', 'medium', 'hard'].includes(difficulty)) {
+  if (difficulty && ['easy', 'medium', 'hard', 'unlimited'].includes(difficulty)) {
     puzzles = puzzles.filter((p) => p.difficulty === difficulty);
   }
   const publicList = puzzles.map((p) => ({
