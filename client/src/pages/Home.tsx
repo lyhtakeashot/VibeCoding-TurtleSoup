@@ -184,15 +184,8 @@ export function Home() {
               onClick={() => navigate('/multi')}
               className="glass px-6 py-5 w-44 text-left transition-all hover:shadow-glow-purple"
             >
-              <div className="text-lg font-semibold mb-1">⚡ 多人竞速</div>
-              <div className="text-xs text-white/50">房间对战 · 先猜中者胜</div>
-            </button>
-            <button
-              onClick={() => navigate('/discuss')}
-              className="glass px-6 py-5 w-44 text-left transition-all hover:shadow-glow"
-            >
-              <div className="text-lg font-semibold mb-1">👥 多人推理</div>
-              <div className="text-xs text-white/50">讨论共推 · 全员共识</div>
+              <div className="text-lg font-semibold mb-1">多人联机</div>
+              <div className="text-xs text-white/50">竞速对战 · 推理共议</div>
             </button>
           </div>
 

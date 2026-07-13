@@ -20,3 +20,9 @@ Thumbs.db
 
 # 提交缓存
 .cache/
+
+# Tencent Cloud EdgeOne
+.env
+.edgeone/*
+.tef_dist/*
+  

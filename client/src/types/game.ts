@@ -1,5 +1,6 @@
 // 从后端唯一类型源导入共享类型，消除双写
-export { type Difficulty, type AnswerKind, type QAItem } from '@server/types';
+import type { Difficulty, AnswerKind, QAItem } from '@server/types';
+export type { Difficulty, AnswerKind, QAItem };
 
 export interface PublicPuzzle {
   id: string;

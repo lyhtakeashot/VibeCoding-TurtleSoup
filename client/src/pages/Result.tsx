@@ -23,8 +23,7 @@ export function Result() {
   if (!data) return <Navigate to="/" replace />;
 
   const again = () => {
-    if (data.mode === 'multi') navigate('/multi');
-    else if (data.mode === 'discuss') navigate('/discuss');
+    if (data.mode === 'multi' || data.mode === 'discuss') navigate('/multi');
     else navigate('/solo');
   };
 

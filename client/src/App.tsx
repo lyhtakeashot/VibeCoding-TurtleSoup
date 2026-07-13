@@ -5,7 +5,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
 const SoloGame = lazy(() => import('./pages/SoloGame').then(m => ({ default: m.SoloGame })));
 const MultiGame = lazy(() => import('./pages/MultiGame').then(m => ({ default: m.MultiGame })));
-const DiscussGame = lazy(() => import('./pages/DiscussGame').then(m => ({ default: m.DiscussGame })));
 const Result = lazy(() => import('./pages/Result').then(m => ({ default: m.Result })));
 const Submit = lazy(() => import('./pages/Submit').then(m => ({ default: m.Submit })));
 const Admin = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })));
@@ -33,10 +32,7 @@ function Nav() {
           单人
         </Link>
         <Link to="/multi" className="hover:text-white">
-          竞速
-        </Link>
-        <Link to="/discuss" className="hover:text-white">
-          推理
+          多人
         </Link>
         <Link to="/submit" className="hover:text-white">
           投稿
@@ -59,7 +55,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/solo" element={<SoloGame />} />
             <Route path="/multi" element={<MultiGame />} />
-            <Route path="/discuss" element={<DiscussGame />} />
+            <Route path="/discuss" element={<MultiGame />} />
             <Route path="/result" element={<Result />} />
             <Route path="/submit" element={<Submit />} />
             <Route path="/admin" element={<Admin />} />

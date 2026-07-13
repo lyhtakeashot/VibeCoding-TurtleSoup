@@ -30,11 +30,6 @@ export default defineConfig({
           });
         },
       },
-      '/socket.io': {
-        target: API_TARGET,
-        ws: true,
-        changeOrigin: true,
-      },
     },
   },
   build: {
