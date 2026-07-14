@@ -68,6 +68,9 @@ export function Admin() {
         <div className="space-y-3">
           {list.map((s) => (
             <div key={s.id} className="glass p-4">
+              {s.title && (
+                <h3 className="text-lg font-bold text-neon-cyan mb-2">{s.title}</h3>
+              )}
               <div className="flex items-center justify-between mb-2">
                 <span className="font-semibold">{s.author || '匿名作者'}</span>
                 <span className="chip">{s.difficulty}</span>

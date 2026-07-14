@@ -4,7 +4,6 @@ import type {
   SubmissionInput,
   Difficulty,
   SoloSessionState,
-  SubmissionItem,
 } from './types/game';
 import type { AnswerKind } from './types/game';
 
@@ -141,10 +140,7 @@ function saveAIConfig(config: AIConfig): void {
 //  API
 // ═══════════════════════════════════════════════
 
-function genId(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
+
 
 export const api = {
   // ---- 题库（优先服务端，兜底客户端） ----
@@ -196,7 +192,7 @@ export const api = {
     question: string,
     onEvent: (e: SoloStreamEvent) => void,
     signal?: AbortSignal,
-  ): void {
+  ): () => void {
     const q = encodeURIComponent(question.trim());
     const url = `/api/solo/ask?sessionId=${encodeURIComponent(sessionId)}&question=${q}`;
 
@@ -284,61 +280,57 @@ export const api = {
   async batchParse(rawText: string): Promise<{ puzzles: SubmissionInput[] }> {
     if (!rawText || typeof rawText !== 'string') throw new Error('缺少 rawText');
     if (rawText.length > 50000) throw new Error('文本过长');
-    const blocks = rawText.split(/(?:^|\n)={3,}\n?|(?:^|\n)-{3,}\n?/).map((b) => b.trim()).filter(Boolean);
-    const puzzles = blocks.map((block) => {
-      const lines = block.split('\n').map((l) => l.trim());
-      const obj: Record<string, string> = {};
-      for (const line of lines) {
-        const m = line.match(/^(.+?)[:：]\s*(.*)$/);
-        if (m) obj[m[1].trim().toLowerCase()] = m[2].trim();
-      }
-      return {
-        title: obj['title'] || obj['标题'] || '',
-        surface: obj['surface'] || obj['汤面'] || '',
-        solution: obj['solution'] || obj['汤底'] || '',
-        difficulty: (obj['difficulty'] || obj['难度'] || 'medium') as Difficulty,
-        hints: (obj['hints'] || obj['提示'] || '').split(/[|｜]/).map((s) => s.trim()).filter(Boolean),
-        tags: (obj['tags'] || obj['标签'] || '').split(/[,，]/).map((s) => s.trim()).filter(Boolean),
-        author: '匿名',
-      };
-    }).filter((p) => p.surface && p.solution);
-    return { puzzles };
+
+    const res = await fetch('/api/submissions/batch-parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rawText }),
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
   },
 
   async submitPuzzle(input: SubmissionInput) {
-    const subs: SubmissionItem[] = JSON.parse(localStorage.getItem('turtle_soup_submissions') || '[]');
-    const sub: SubmissionItem = {
-      id: genId(),
-      title: input.title || input.surface.slice(0, 14),
-      surface: input.surface,
-      solution: input.solution,
-      difficulty: input.difficulty,
-      hints: input.hints || [],
-      tags: input.tags || [],
-      author: input.author || '匿名',
-      status: 'pending',
-      createdAt: Date.now(),
-    };
-    subs.push(sub);
-    localStorage.setItem('turtle_soup_submissions', JSON.stringify(subs));
-    return { ok: true, id: sub.id, status: 'pending' };
+    const res = await fetch('/api/submissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: input.title,
+        surface: input.surface,
+        solution: input.solution,
+        difficulty: input.difficulty,
+        hints: input.hints || [],
+        tags: input.tags || [],
+        author: input.author || '匿名',
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
   },
 
   async listSubmissions(pass: string, status?: string) {
-    if (pass !== 'turtle-admin-2026') throw new Error('口令错误');
-    let subs: SubmissionItem[] = JSON.parse(localStorage.getItem('turtle_soup_submissions') || '[]');
-    if (status) subs = subs.filter((s) => s.status === status);
-    return { submissions: subs };
+    const res = await fetch('/api/submissions/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pass, status }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
   },
 
   async moderate(id: string, action: 'approve' | 'reject', pass: string) {
-    if (pass !== 'turtle-admin-2026') throw new Error('口令错误');
-    const subs: SubmissionItem[] = JSON.parse(localStorage.getItem('turtle_soup_submissions') || '[]');
-    const sub = subs.find((s) => s.id === id);
-    if (!sub) throw new Error('投稿不存在');
-    sub.status = action === 'approve' ? 'approved' : 'rejected';
-    localStorage.setItem('turtle_soup_submissions', JSON.stringify(subs));
-    return { ok: true };
+    const res = await fetch(`/api/submissions/${id}/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pass }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
   },
 
   // ---- 房间列表 ----

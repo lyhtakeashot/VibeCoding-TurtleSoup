@@ -1,5 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
+import { getStore } from '@edgeone/pages-blob';
 
 // ──────────────────────────────────────────────
 //  Embedded Puzzle Data (read-only)
@@ -140,7 +141,124 @@ const PUZZLES = [
 }));
 
 // ──────────────────────────────────────────────
-//  In-Memory State
+//  Blob Storage (EdgeOne Pages persistent storage)
+// ──────────────────────────────────────────────
+let _blobStore = null;
+function getBlobStore() {
+  if (_blobStore !== null) return _blobStore;
+  try {
+    _blobStore = getStore('turtle-soup-data');
+  } catch (e) {
+    console.warn('[blob] Blob Storage unavailable, using in-memory only:', e.message);
+    _blobStore = false;
+  }
+  return _blobStore;
+}
+
+const BLOB_KEYS = {
+  submissions: 'submissions',
+  config: 'runtimeConfig',
+  puzzles: 'customPuzzles',
+};
+
+async function persistSubmissions() {
+  const store = getBlobStore();
+  if (!store) return;
+  try {
+    await store.setJSON(BLOB_KEYS.submissions, submissions);
+  } catch (e) {
+    console.error('[blob] persistSubmissions failed:', e.message);
+  }
+}
+
+async function loadSubmissions() {
+  const store = getBlobStore();
+  if (!store) return;
+  try {
+    const data = await store.get(BLOB_KEYS.submissions, { type: 'json' });
+    if (Array.isArray(data) && data.length > 0) {
+      submissions.push(...data);
+      console.log(`[blob] Loaded ${data.length} submissions`);
+    }
+  } catch (e) {
+    console.error('[blob] loadSubmissions failed:', e.message);
+  }
+}
+
+async function persistConfig() {
+  const store = getBlobStore();
+  if (!store) return;
+  try {
+    await store.setJSON(BLOB_KEYS.config, {
+      apiKey: runtimeConfig.apiKey,
+      baseURL: runtimeConfig.baseURL,
+      model: runtimeConfig.model,
+      useAI: runtimeConfig.useAI,
+      testMode: runtimeConfig.testMode,
+    });
+  } catch (e) {
+    console.error('[blob] persistConfig failed:', e.message);
+  }
+}
+
+async function loadConfig() {
+  const store = getBlobStore();
+  if (!store) return;
+  try {
+    const data = await store.get(BLOB_KEYS.config, { type: 'json' });
+    if (data && typeof data === 'object') {
+      if (data.apiKey) runtimeConfig.apiKey = data.apiKey;
+      if (data.baseURL) runtimeConfig.baseURL = data.baseURL;
+      if (data.model) runtimeConfig.model = data.model;
+      if (typeof data.useAI === 'boolean') runtimeConfig.useAI = data.useAI;
+      if (typeof data.testMode === 'boolean') runtimeConfig.testMode = data.testMode;
+      console.log('[blob] Loaded runtimeConfig');
+    }
+  } catch (e) {
+    console.error('[blob] loadConfig failed:', e.message);
+  }
+}
+
+async function persistPuzzles() {
+  const store = getBlobStore();
+  if (!store) return;
+  try {
+    // Only persist non-base puzzles (approved submissions + editor additions)
+    const customPuzzles = PUZZLES.filter((p) => p.id?.startsWith('sub_') || p.id?.startsWith('custom_'));
+    await store.setJSON(BLOB_KEYS.puzzles, customPuzzles);
+  } catch (e) {
+    console.error('[blob] persistPuzzles failed:', e.message);
+  }
+}
+
+async function loadPuzzles() {
+  const store = getBlobStore();
+  if (!store) return;
+  try {
+    const data = await store.get(BLOB_KEYS.puzzles, { type: 'json' });
+    if (Array.isArray(data) && data.length > 0) {
+      PUZZLES.push(...data);
+      console.log(`[blob] Loaded ${data.length} custom puzzles`);
+    }
+  } catch (e) {
+    console.error('[blob] loadPuzzles failed:', e.message);
+  }
+}
+
+// Initialize: load persisted data on cold start
+let _initialized = false;
+async function initStorage() {
+  if (_initialized) return;
+  _initialized = true;
+  const store = getBlobStore();
+  if (!store) return;
+  console.log('[blob] Initializing Blob Storage...');
+  await Promise.all([loadSubmissions(), loadConfig(), loadPuzzles()]);
+  console.log('[blob] Initialization complete');
+}
+
+// ──────────────────────────────────────────────
+//  In-Memory State (synced with Blob Storage)
 // ──────────────────────────────────────────────
 const sessions = new Map();
 const submissions = [];
@@ -295,7 +413,14 @@ ${puzzle.solution}
    示例输出：是|12、不是|3、是也不是|15、无关|0、是|30
 2. 不得输出任何解释性文字，严格按格式回复，连标点符号都不要加。
 3. 绝不能在揭晓前主动说出完整汤底/真相。
-4. 仅当玩家明确说「揭示/真相/汤底/结局是什么」时，你才可以回复整段真相。`;
+4. 仅当玩家明确说「揭示/真相/汤底/结局是什么」时，你才可以回复整段真相。
+5. 语义重复检测：如果当前问题与对话历史中已问过的某个问题在语义上完全相同（问的是同一件事，只是换了说法），必须回答「无关|0」。
+   判断标准：只要两个问题指向同一核心事实、答案可以由之前的回答直接推导出来，就应视为重复。
+   示例：
+   - "他死了吗" 与 "他还活着吗" → 重复（都问生死状态）
+   - "凶手是男人吗" 与 "凶手是女性吗" → 重复（都问性别）
+   - "发生在白天吗" 与 "是晚上发生的吗" → 重复（都问时间）
+   - "用的是刀吗" 与 "凶器是刀吗" → 重复（都问凶器）`;
 }
 
 function buildHostMessages(puzzle, question, history = []) {
@@ -456,6 +581,12 @@ function nextHint(session) {
 // ──────────────────────────────────────────────
 const app = express();
 app.use(express.json({ limit: '1mb' }));
+
+// Ensure Blob Storage data is loaded before handling any request
+app.use(async (_req, _res, next) => {
+  await initStorage();
+  next();
+});
 
 // Input validation middleware
 app.use('/api/solo', (req, _res, next) => {
@@ -619,6 +750,7 @@ app.put('/api/config', (req, res) => {
   if (typeof patch.useAI === 'boolean') { runtimeConfig.useAI = patch.useAI; updated.push('useAI'); }
   if (typeof patch.testMode === 'boolean') { runtimeConfig.testMode = patch.testMode; updated.push('testMode'); }
   if (updated.length === 0) return res.status(400).json({ error: '无有效更新字段' });
+  persistConfig(); // fire-and-forget
   res.json({ ok: true, updated });
 });
 
@@ -657,6 +789,7 @@ app.post('/api/submissions', (req, res) => {
     createdAt: Date.now(),
   };
   submissions.push(sub);
+  persistSubmissions(); // fire-and-forget
   res.json({ ok: true, id: sub.id, status: 'pending' });
 });
 
@@ -709,6 +842,8 @@ app.post('/api/submissions/:id/approve', (req, res) => {
     id: `sub_${sub.id}`,
     maxQuestions: MAX_Q_BY_DIFF[sub.difficulty] || 30,
   });
+  persistSubmissions();
+  persistPuzzles();
   res.json({ ok: true, submission: sub });
 });
 
@@ -720,6 +855,7 @@ app.post('/api/submissions/:id/reject', (req, res) => {
   const sub = submissions.find((s) => s.id === req.params.id);
   if (!sub) return res.status(404).json({ error: '投稿不存在' });
   sub.status = 'rejected';
+  persistSubmissions();
   res.json({ ok: true, submission: sub });
 });
 
@@ -752,6 +888,7 @@ app.put('/api/editor/puzzles/:id', (req, res) => {
   if (tags !== undefined) puzzle.tags = tags;
   if (hints !== undefined) puzzle.hints = hints;
   if (author !== undefined) puzzle.author = author;
+  persistPuzzles();
   res.json({ ok: true, id: puzzle.id });
 });
 
@@ -763,6 +900,7 @@ app.delete('/api/editor/puzzles/:id', (req, res) => {
   const idx = PUZZLES.findIndex((p) => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: '题目不存在' });
   PUZZLES.splice(idx, 1);
+  persistPuzzles();
   res.json({ ok: true });
 });
 
@@ -792,6 +930,7 @@ app.put('/api/editor/submissions/:id', (req, res) => {
   if (hints !== undefined) sub.hints = hints;
   if (author !== undefined) sub.author = author;
   if (status !== undefined) sub.status = status;
+  persistSubmissions();
   res.json({ ok: true, submission: sub });
 });
 

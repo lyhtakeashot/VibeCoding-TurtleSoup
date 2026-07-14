@@ -5,9 +5,11 @@ import { callCodeBuddyDirect } from './codebuddyClient.js';
 const BATCH_PARSE_PROMPT = `你是一位海龟汤（情境推理）题目结构化助手。
 用户会输入多道海龟汤题目，每道题格式固定：
 
-题目
-汤面：...（悬疑描述）
-汤底：...（真相解释）
+《题目》
+汤面：
+...（悬疑描述）
+汤底：
+...（真相解释）
 
 输入按顺序排列，系统自动编号。请逐题提取信息并补全，输出严格 JSON 数组，每道题按输入顺序排列，每个元素为：
 {
@@ -183,7 +185,7 @@ function parseByRules(raw: string): Array<{
   const results: Array<{ title: string; surface: string; solution: string }> = [];
 
   // 按 《 或 题目 分割每个题
-  const blocks = raw.split(/(?=(?:《|题目\s*(?:\d+|：|:)))/);
+  const blocks = raw.split(/\n\s*\n\s*(?=(?:《|题目\s*(?:\d+|：|:)))/);
 
   for (const block of blocks) {
     const trimmed = block.trim();
@@ -326,7 +328,7 @@ export async function parseBatchPuzzles(rawText: string): Promise<{
   }
 
   if (parsed.length === 0) {
-    throw new Error('未识别出任何题目，请确认输入格式：每道题以「题目」开头，依次填写「汤面：」和「汤底：」。');
+    throw new Error('未识别出任何题目，请确认输入格式：每道题以《题目》开头，依次填写「汤面：」和「汤底：」。');
   }
 
   return parsed.map((item: any) => ({

@@ -18,6 +18,7 @@
     "install:all": "npm install && npm --prefix server install && npm --prefix client install"
   },
   "dependencies": {
+    "@edgeone/pages-blob": "^0.0.14",
     "cors": "^2.8.5",
     "express": "^4.21.1"
   },
