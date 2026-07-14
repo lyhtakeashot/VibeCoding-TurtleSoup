@@ -343,6 +343,6 @@ process.on('unhandledRejection', (reason) => {
   console.error('[server] 未处理 Promise 拒绝:', reason);
 });
 
-httpServer.listen(config.port, () => {
-  console.log(`[server] 海龟汤后端已启动： http://localhost:${config.port}`);
+httpServer.listen(config.port, '0.0.0.0', () => {
+  console.log(`[server] 海龟汤后端已启动： http://0.0.0.0:${config.port}`);
 });

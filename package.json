@@ -12,6 +12,7 @@
     "build:server": "npm --prefix server run build",
     "build:client": "npm --prefix client run build",
     "start": "npm --prefix server run start",
+    "start:prod": "npm run build:client && npm start",
     "expand-puzzles": "npx tsx server/src/scripts/expandPuzzles.ts",
     "proxy": "npx tsx server/src/scripts/codebuddy-proxy.ts",
     "install:all": "npm install && npm --prefix server install && npm --prefix client install"

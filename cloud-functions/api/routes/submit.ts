@@ -18,7 +18,7 @@ function checkPass(req: any): boolean {
 }
 
 // 玩家投稿
-submitRouter.post('/', (req, res) => {
+submitRouter.post('/', async (req, res) => {
   const b = req.body || {};
   if (!b.surface || !b.solution) {
     return res.status(400).json({ error: '汤面与汤底为必填' });
@@ -32,7 +32,7 @@ submitRouter.post('/', (req, res) => {
     tags: Array.isArray(b.tags) ? b.tags.map(String) : [],
     author: String(b.author || '匿名作者'),
   };
-  const sub = createSubmission(input);
+  const sub = await createSubmission(input);
   res.json({ ok: true, id: sub.id, status: sub.status });
 });
 
@@ -57,25 +57,25 @@ submitRouter.post('/batch-parse', async (req, res) => {
 });
 
 // 审核列表（需口令，使用 POST 避免口令暴露在 URL 中）
-submitRouter.post('/list', (req, res) => {
+submitRouter.post('/list', async (req, res) => {
   if (!checkPass(req)) return res.status(403).json({ error: '口令错误' });
   const status = req.body.status as any;
-  res.json({ submissions: listSubmissions(status) });
+  res.json({ submissions: await listSubmissions(status) });
 });
 
 // 通过
-submitRouter.post('/:id/approve', (req, res) => {
+submitRouter.post('/:id/approve', async (req, res) => {
   if (!checkPass(req)) return res.status(403).json({ error: '口令错误' });
-  const sub = setStatus(req.params.id, 'approved');
+  const sub = await setStatus(req.params.id, 'approved');
   if (!sub) return res.status(404).json({ error: '投稿不存在' });
-  manager.refreshApproved();
+  await manager.refreshApproved();
   res.json({ ok: true, submission: sub });
 });
 
 // 驳回
-submitRouter.post('/:id/reject', (req, res) => {
+submitRouter.post('/:id/reject', async (req, res) => {
   if (!checkPass(req)) return res.status(403).json({ error: '口令错误' });
-  const sub = setStatus(req.params.id, 'rejected');
+  const sub = await setStatus(req.params.id, 'rejected');
   if (!sub) return res.status(404).json({ error: '投稿不存在' });
   res.json({ ok: true, submission: sub });
 });

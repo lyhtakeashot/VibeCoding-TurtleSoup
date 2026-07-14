@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { loadRuntimeConfig, saveRuntimeConfig, getRuntimeConfig } from '../runtimeConfig.js';
+import { saveRuntimeConfig, getRuntimeConfig } from '../runtimeConfig.js';
 
 export const configRouter = Router();
 
@@ -49,8 +49,7 @@ configRouter.put('/', async (req, res) => {
     }
 
     await saveRuntimeConfig(updated);
-    // 立即让 config 生效
-    loadRuntimeConfig();
+    // saveRuntimeConfig 已同步更新内存，无需额外 reload
 
     // 重置 AI 客户端（兼容接口调用）
     const { resetAIClient } = await import('../ai/client.js');

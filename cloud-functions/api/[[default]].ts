@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 
 import { config } from './config.js';
-import { getRuntimeConfig, isAIEnabled } from './runtimeConfig.js';
+import { getRuntimeConfig, isAIEnabled, initRuntimeConfig } from './runtimeConfig.js';
 import { manager } from './games/manager.js';
 import { hostAnswer } from './host.js';
 import { judgeGuess } from './judge.js';
@@ -11,6 +11,7 @@ import { submitRouter } from './routes/submit.js';
 import { roomsRouter } from './routes/rooms.js';
 import { configRouter } from './routes/config.js';
 import { editorRouter } from './routes/editor.js';
+import { migrateSubmissionsFromFile } from './games/submissions.js';
 import type { Puzzle } from './types.js';
 
 const app = express();
@@ -285,6 +286,32 @@ testRouter.post('/generate', async (_req, res) => {
 });
 
 app.use('/api/__test__', testRouter);
+
+// ───── 异步初始化 ─────
+// 模块加载时执行：从 storage 加载配置、审核通过的投稿，并迁移文件数据
+
+let _initPromise: Promise<void> | null = null;
+
+async function ensureInit(): Promise<void> {
+  if (_initPromise) return _initPromise;
+  _initPromise = (async () => {
+    try {
+      // 1. 初始化运行时配置（storage + 环境变量）
+      await initRuntimeConfig();
+      // 2. 从文件迁移投稿数据到 storage（首次部署）
+      await migrateSubmissionsFromFile();
+      // 3. 加载已审核通过的投稿到内存题库
+      await manager.refreshApproved();
+      console.log('[init] ✅ 云函数初始化完成');
+    } catch (e) {
+      console.error('[init] 初始化失败:', (e as Error).message);
+    }
+  })();
+  return _initPromise;
+}
+
+// 立即触发初始化（在支持 top-level await 的环境中会等待完成）
+void ensureInit();
 
 // Cloud Functions: 导出 app，不调用 listen()
 export default app;

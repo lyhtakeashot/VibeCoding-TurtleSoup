@@ -127,7 +127,7 @@ USE_AI=false                 # 是否启用 AI（false=纯规则零 token）
 
 # 服务配置
 PORT=3001
-CLIENT_ORIGIN=http://localhost:5173
+CLIENT_ORIGIN=*
 
 # 管理口令
 ADMIN_PASS=turtle-admin-2026
@@ -139,7 +139,7 @@ MAX_CONTEXT_ROUNDS=12
 ## 生产构建
 
 ```bash
-npm run build          # 编译 server + 构建 client
+npm run build:client   # 构建前端静态资源
 npm start              # 后端在 3001 端口托管前端，单域名访问
 ```
 
@@ -149,9 +149,32 @@ npm start              # 后端在 3001 端口托管前端，单域名访问
 
 后端编译后托管前端静态资源，单进程即可运行：
 
-- **任意 VPS**：上传代码 → `npm run install:all` → `npm run build` → `npm start`，用 Nginx/Caddy 反代 3001
-- **CloudBase 云托管**：构建命令 `npm run build`，启动命令 `npm start`，监听 `PORT` 环境变量
-- AI 密钥仅存在于服务端 `.env`，前端永不持有
+- **任意 VPS**：上传代码 → `npm run install:all` → `npm run build:client` → `npm start`，用 Nginx/Caddy 反代 3001
+- **Cloud Studio**：导入 Git 仓库 → 配置环境变量 → 启动命令 `npm run start:prod` → 自动获得公网 URL（详见下方）
+- **CloudBase 云托管**：构建命令 `npm run build:client`，启动命令 `npm start`，监听 `PORT` 环境变量
+- AI 密钥仅存在于服务端环境变量，前端永不持有
+
+### Cloud Studio 部署步骤
+
+1. 将项目推送到 GitHub / CNB 仓库
+2. 在 [cloudstudio.net](https://cloudstudio.net) 创建应用 → 从 Git 导入
+3. 配置环境变量（见下方清单）
+4. 启动命令设为 `npm run start:prod`，主端口 `3001`
+5. 应用启动后自动获得公网 URL，任何人可访问
+
+**环境变量清单（Cloud Studio）**：
+
+| 变量 | 必填 | 默认值 | 说明 |
+|------|------|--------|------|
+| `AI_API_KEY` | 是 | - | AI 提供商 API Key |
+| `AI_BASE_URL` | 否 | `https://api.openai.com/v1` | API 地址 |
+| `AI_MODEL` | 否 | `gpt-3.5-turbo` | 模型名称 |
+| `USE_AI` | 否 | `false` | 设为 `true` 启用 AI |
+| `ADMIN_PASS` | 否 | `turtle-admin-2026` | 审核口令 |
+| `PORT` | 否 | `3001` | 服务端口 |
+| `CLIENT_ORIGIN` | 否 | `*` | CORS 来源（线上使用通配符） |
+
+项目根目录的 `.vscode/preview.yml` 已配置自动预览，Cloud Studio 会自动识别。
 
 ## 设计说明
 

@@ -75,11 +75,12 @@ export class GameManager {
 
   constructor() {
     this.basePuzzles = loadBasePuzzles();
-    this.refreshApproved();
+    // refreshApproved() 改为异步，由入口点显式调用
   }
 
-  refreshApproved(): void {
-    this.approvedCache = listSubmissions('approved').map(submissionToPuzzle);
+  async refreshApproved(): Promise<void> {
+    const subs = await listSubmissions('approved');
+    this.approvedCache = subs.map(submissionToPuzzle);
   }
 
   getPlayablePuzzles(): Puzzle[] {

@@ -9,7 +9,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 export const config = {
   port: Number(process.env.PORT || 3001),
-  clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  clientOrigin: process.env.CLIENT_ORIGIN || '*',
   adminPass: process.env.ADMIN_PASS || 'turtle-admin-2026',
   maxContextRounds: Number(process.env.MAX_CONTEXT_ROUNDS || 12),
 

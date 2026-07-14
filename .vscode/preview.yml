@@ -1,0 +1,8 @@
+apps:
+  - port: 3001
+    run: npm run start:prod
+    root: ./
+    name: 海龟汤 AI 主持
+    mainPort: true
+    autoOpen: true
+    autoPreview: true

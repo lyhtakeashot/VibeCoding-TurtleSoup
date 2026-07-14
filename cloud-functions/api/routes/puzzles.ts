@@ -63,7 +63,7 @@ puzzlesRouter.post('/generate', async (req, res) => {
     }
     // 写入投稿系统（pending 状态待审核）
     const { createSubmission } = await import('../games/submissions.js');
-    const sub = createSubmission({
+    const sub = await createSubmission({
       surface: puzzle.surface,
       solution: puzzle.solution,
       difficulty: puzzle.difficulty,

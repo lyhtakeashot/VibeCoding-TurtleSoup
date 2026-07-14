@@ -3,13 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config } from '../config.js';
-import { listSubmissions } from '../games/submissions.js';
+import { listSubmissions, readAllSubmissions, writeAllSubmissions } from '../games/submissions.js';
 import { manager } from '../games/manager.js';
 import type { Puzzle, Difficulty } from '../types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUZZLES_FILE = path.resolve(__dirname, '../../data/puzzles.json');
-const SUBMISSIONS_FILE = path.resolve(__dirname, '../../data/submissions.json');
 
 export const editorRouter = Router();
 
@@ -29,7 +28,7 @@ editorRouter.get('/puzzles', (_req, res) => {
 });
 
 // PUT /api/editor/puzzles/:id — 编辑一道题目
-editorRouter.put('/puzzles/:id', (req, res) => {
+editorRouter.put('/puzzles/:id', async (req, res) => {
   const id = req.params.id;
   const b = req.body || {};
 
@@ -37,7 +36,7 @@ editorRouter.put('/puzzles/:id', (req, res) => {
   if (id.startsWith('sub_')) {
     // 编辑已审核通过的投稿
     const submissionId = id.slice(4);
-    const subs = readSubmissions();
+    const subs = await readAllSubmissions();
     const idx = subs.findIndex((s: any) => s.id === submissionId);
     if (idx === -1) return res.status(404).json({ error: '投稿不存在' });
 
@@ -51,12 +50,12 @@ editorRouter.put('/puzzles/:id', (req, res) => {
     if (Array.isArray(b.hints)) sub.hints = b.hints.map(String);
     if (b.author !== undefined) sub.author = String(b.author);
 
-    writeSubmissions(subs);
-    manager.refreshApproved();
+    await writeAllSubmissions(subs);
+    await manager.refreshApproved();
     return res.json({ ok: true, id });
   }
 
-  // 编辑本地题库题目
+  // 编辑本地题库题目（仅文件操作，云端不可编辑）
   const puzzles = readPuzzles();
   const idx = puzzles.findIndex((p: any) => p.id === id);
   if (idx === -1) return res.status(404).json({ error: '题目不存在' });
@@ -77,16 +76,16 @@ editorRouter.put('/puzzles/:id', (req, res) => {
 });
 
 // DELETE /api/editor/puzzles/:id — 删除一道题目
-editorRouter.delete('/puzzles/:id', (req, res) => {
+editorRouter.delete('/puzzles/:id', async (req, res) => {
   const id = req.params.id;
 
   if (id.startsWith('sub_')) {
     const submissionId = id.slice(4);
-    const subs = readSubmissions();
+    const subs = await readAllSubmissions();
     const filtered = subs.filter((s: any) => s.id !== submissionId);
     if (filtered.length === subs.length) return res.status(404).json({ error: '投稿不存在' });
-    writeSubmissions(filtered);
-    manager.refreshApproved();
+    await writeAllSubmissions(filtered);
+    await manager.refreshApproved();
     return res.json({ ok: true });
   }
 
@@ -100,17 +99,17 @@ editorRouter.delete('/puzzles/:id', (req, res) => {
 // ─── 投稿操作 ───
 
 // GET /api/editor/submissions — 列出所有投稿（用于编辑审核中的投稿）
-editorRouter.get('/submissions', (req, res) => {
+editorRouter.get('/submissions', async (req, res) => {
   const status = req.query.status as string | undefined;
-  res.json({ submissions: listSubmissions(status as any) });
+  res.json({ submissions: await listSubmissions(status as any) });
 });
 
 // PUT /api/editor/submissions/:id — 编辑投稿
-editorRouter.put('/submissions/:id', (req, res) => {
+editorRouter.put('/submissions/:id', async (req, res) => {
   const id = req.params.id;
   const b = req.body || {};
 
-  const subs = readSubmissions();
+  const subs = await readAllSubmissions();
   const idx = subs.findIndex((s: any) => s.id === id);
   if (idx === -1) return res.status(404).json({ error: '投稿不存在' });
 
@@ -126,8 +125,8 @@ editorRouter.put('/submissions/:id', (req, res) => {
   if (b.status !== undefined && ['pending', 'approved', 'rejected'].includes(b.status))
     sub.status = b.status;
 
-  writeSubmissions(subs);
-  if (sub.status === 'approved') manager.refreshApproved();
+  await writeAllSubmissions(subs);
+  if (sub.status === 'approved') await manager.refreshApproved();
   res.json({ ok: true, submission: sub });
 });
 
@@ -143,16 +142,4 @@ function readPuzzles(): any[] {
 
 function writePuzzles(list: any[]): void {
   fs.writeFileSync(PUZZLES_FILE, JSON.stringify(list, null, 2), 'utf-8');
-}
-
-function readSubmissions(): any[] {
-  try {
-    return JSON.parse(fs.readFileSync(SUBMISSIONS_FILE, 'utf-8'));
-  } catch {
-    return [];
-  }
-}
-
-function writeSubmissions(list: any[]): void {
-  fs.writeFileSync(SUBMISSIONS_FILE, JSON.stringify(list, null, 2), 'utf-8');
 }
