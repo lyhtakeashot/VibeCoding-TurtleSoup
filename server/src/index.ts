@@ -323,26 +323,33 @@ const io = new Server(httpServer, {
   cors: { origin: config.clientOrigin, credentials: true },
 });
 
-if (isAIEnabled()) {
-  console.log('[server] AI 增强已启用 ✨');
-} else {
-  console.log('[server] 纯规则主持人模式（零 token）。在配置页面设置 API 密钥并启用 AI 可获得智能回答。');
-}
+// ---------- 异步启动 ----------
+(async () => {
+  // 初始化基础题库
+  await manager.initBasePuzzles();
+  console.log(`[server] 基础题库加载完成（共 ${manager.getPlayablePuzzles().length} 题）`);
 
-setupSockets(io);
+  if (isAIEnabled()) {
+    console.log('[server] AI 增强已启用 ✨');
+  } else {
+    console.log('[server] 纯规则主持人模式（零 token）。在配置页面设置 API 密钥并启用 AI 可获得智能回答。');
+  }
 
-// ---------- 启动房间过期清理定时器 ----------
-manager.startRoomCleanup(5 * 60 * 1000);
+  setupSockets(io);
 
-// ---------- 全局错误兜底，防止进程崩溃 ----------
-process.on('uncaughtException', (err) => {
-  console.error('[server] 未捕获异常:', err.message, err.stack);
-  // 记录后不退出，让 pm2 等进程管理器决定是否重启
-});
-process.on('unhandledRejection', (reason) => {
-  console.error('[server] 未处理 Promise 拒绝:', reason);
-});
+  // ---------- 启动房间过期清理定时器 ----------
+  manager.startRoomCleanup(5 * 60 * 1000);
 
-httpServer.listen(config.port, '0.0.0.0', () => {
-  console.log(`[server] 海龟汤后端已启动： http://0.0.0.0:${config.port}`);
-});
+  // ---------- 全局错误兜底，防止进程崩溃 ----------
+  process.on('uncaughtException', (err) => {
+    console.error('[server] 未捕获异常:', err.message, err.stack);
+    // 记录后不退出，让 pm2 等进程管理器决定是否重启
+  });
+  process.on('unhandledRejection', (reason) => {
+    console.error('[server] 未处理 Promise 拒绝:', reason);
+  });
+
+  httpServer.listen(config.port, '0.0.0.0', () => {
+    console.log(`[server] 海龟汤后端已启动： http://0.0.0.0:${config.port}`);
+  });
+})();

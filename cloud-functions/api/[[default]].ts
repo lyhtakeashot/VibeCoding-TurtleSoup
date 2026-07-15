@@ -11,7 +11,7 @@ import { submitRouter } from './routes/submit.js';
 import { roomsRouter } from './routes/rooms.js';
 import { configRouter } from './routes/config.js';
 import { editorRouter } from './routes/editor.js';
-import { migrateSubmissionsFromFile } from './games/submissions.js';
+import { migrateSubmissionsFromFile, migratePuzzlesFromFile } from './games/submissions.js';
 import type { Puzzle } from './types.js';
 
 const app = express();
@@ -298,9 +298,13 @@ async function ensureInit(): Promise<void> {
     try {
       // 1. 初始化运行时配置（storage + 环境变量）
       await initRuntimeConfig();
-      // 2. 从文件迁移投稿数据到 storage（首次部署）
+      // 2. 从文件迁移基础题库到 storage（首次部署）
+      await migratePuzzlesFromFile();
+      // 3. 从 storage 加载基础题库到内存
+      await manager.initBasePuzzles();
+      // 4. 从文件迁移投稿数据到 storage（首次部署）
       await migrateSubmissionsFromFile();
-      // 3. 加载已审核通过的投稿到内存题库
+      // 5. 加载已审核通过的投稿到内存题库
       await manager.refreshApproved();
       console.log('[init] ✅ 云函数初始化完成');
     } catch (e) {

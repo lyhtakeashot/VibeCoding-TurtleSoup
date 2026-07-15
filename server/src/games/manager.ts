@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Puzzle, Difficulty, QAItem } from '../types.js';
@@ -25,9 +25,9 @@ const PUZZLES_FILE = path.resolve(__dirname, '../../data/puzzles.json');
 
 const BASE_PUBLISH_DATE = Date.UTC(2025, 8, 1); // 官方题库起始发布日 2025-09-01
 
-function loadBasePuzzles(): Puzzle[] {
+async function loadBasePuzzles(): Promise<Puzzle[]> {
   try {
-    const raw = JSON.parse(fs.readFileSync(PUZZLES_FILE, 'utf-8')) as Puzzle[];
+    const raw = JSON.parse(await fs.readFile(PUZZLES_FILE, 'utf-8')) as Puzzle[];
     // 补齐作者与发布日期：种子题未标注时按索引均匀错开
     return raw.map((p, i) => ({
       ...p,
@@ -68,14 +68,19 @@ function submissionToPuzzle(s: {
 }
 
 export class GameManager {
-  private basePuzzles: Puzzle[];
+  private basePuzzles: Puzzle[] = [];
   private approvedCache: Puzzle[] = [];
   private sessions = new Map<string, Session>();
   private rooms = new Map<string, Room>();
 
   constructor() {
-    this.basePuzzles = loadBasePuzzles();
-    this.refreshApproved();
+    // 构造函数不再自动加载 — initBasePuzzles() 由入口点异步调用
+  }
+
+  /** 从文件加载基础题库到内存 */
+  async initBasePuzzles(): Promise<void> {
+    this.basePuzzles = await loadBasePuzzles();
+    console.log(`[manager] 从文件加载了 ${this.basePuzzles.length} 道基础题`);
   }
 
   refreshApproved(): void {

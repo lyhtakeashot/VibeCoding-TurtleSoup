@@ -1,14 +1,9 @@
 import { Router } from 'express';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { config } from '../config.js';
 import { listSubmissions, readAllSubmissions, writeAllSubmissions } from '../games/submissions.js';
 import { manager } from '../games/manager.js';
+import { getStorage } from '../storage/index.js';
 import type { Puzzle, Difficulty } from '../types.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PUZZLES_FILE = path.resolve(__dirname, '../../data/puzzles.json');
 
 export const editorRouter = Router();
 
@@ -55,8 +50,8 @@ editorRouter.put('/puzzles/:id', async (req, res) => {
     return res.json({ ok: true, id });
   }
 
-  // 编辑本地题库题目（仅文件操作，云端不可编辑）
-  const puzzles = readPuzzles();
+  // 编辑基础题库题目（走 storage，即时生效）
+  const puzzles = await readPuzzles();
   const idx = puzzles.findIndex((p: any) => p.id === id);
   if (idx === -1) return res.status(404).json({ error: '题目不存在' });
 
@@ -70,9 +65,8 @@ editorRouter.put('/puzzles/:id', async (req, res) => {
   if (Array.isArray(b.hints)) p.hints = b.hints.map(String);
   if (b.author !== undefined) p.author = String(b.author);
 
-  writePuzzles(puzzles);
-  // 需要重启服务才能重新加载 base puzzles，但已审核投稿会立即刷新
-  res.json({ ok: true, id, note: 'base puzzle 修改将在服务重启后生效（已审核投稿已即时刷新）' });
+  await writePuzzles(puzzles);
+  return res.json({ ok: true, id });
 });
 
 // DELETE /api/editor/puzzles/:id — 删除一道题目
@@ -89,11 +83,11 @@ editorRouter.delete('/puzzles/:id', async (req, res) => {
     return res.json({ ok: true });
   }
 
-  const puzzles = readPuzzles();
+  const puzzles = await readPuzzles();
   const filtered = puzzles.filter((p: any) => p.id !== id);
   if (filtered.length === puzzles.length) return res.status(404).json({ error: '题目不存在' });
-  writePuzzles(filtered);
-  return res.json({ ok: true, note: '删除将在服务重启后生效' });
+  await writePuzzles(filtered);
+  return res.json({ ok: true });
 });
 
 // ─── 投稿操作 ───
@@ -132,14 +126,16 @@ editorRouter.put('/submissions/:id', async (req, res) => {
 
 // ─── helpers ───
 
-function readPuzzles(): any[] {
-  try {
-    return JSON.parse(fs.readFileSync(PUZZLES_FILE, 'utf-8'));
-  } catch {
-    return [];
-  }
+async function readPuzzles(): Promise<Puzzle[]> {
+  const storage = getStorage();
+  const data = await storage.read<Puzzle[]>('puzzles');
+  return data || [];
 }
 
-function writePuzzles(list: any[]): void {
-  fs.writeFileSync(PUZZLES_FILE, JSON.stringify(list, null, 2), 'utf-8');
+async function writePuzzles(list: Puzzle[]): Promise<void> {
+  const storage = getStorage();
+  await storage.write('puzzles', list);
+  // 立即更新内存中的基础题库，无需重启
+  await manager.initBasePuzzles();
+  console.log(`[editor] 基础题库已更新并重新加载（共 ${list.length} 道题）`);
 }

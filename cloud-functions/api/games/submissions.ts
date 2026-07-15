@@ -102,3 +102,24 @@ export async function migrateSubmissionsFromFile(): Promise<void> {
     console.log(`[submissions] 从文件迁移了 ${fromFile.length} 条投稿到 storage`);
   }
 }
+
+/** 将基础题库从文件迁移到 storage（首次部署时执行一次） */
+export async function migratePuzzlesFromFile(): Promise<void> {
+  const storage = getStorage();
+  const existing = await storage.read('puzzles');
+  if (existing !== null) return; // 已有数据，不覆盖
+
+  const puzzlesFile = path.resolve(__dirname, '../../data/puzzles.json');
+  let fromFile: any[] = [];
+  try {
+    const raw = fs.readFileSync(puzzlesFile, 'utf-8');
+    fromFile = JSON.parse(raw);
+  } catch {
+    // 文件不存在则跳过
+  }
+
+  if (fromFile.length > 0) {
+    await storage.write('puzzles', fromFile);
+    console.log(`[puzzles] 从文件迁移了 ${fromFile.length} 道基础题到 storage`);
+  }
+}

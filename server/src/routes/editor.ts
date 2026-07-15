@@ -29,7 +29,7 @@ editorRouter.get('/puzzles', (_req, res) => {
 });
 
 // PUT /api/editor/puzzles/:id — 编辑一道题目
-editorRouter.put('/puzzles/:id', (req, res) => {
+editorRouter.put('/puzzles/:id', async (req, res) => {
   const id = req.params.id;
   const b = req.body || {};
 
@@ -56,7 +56,7 @@ editorRouter.put('/puzzles/:id', (req, res) => {
     return res.json({ ok: true, id });
   }
 
-  // 编辑本地题库题目
+  // 编辑基础题库题目
   const puzzles = readPuzzles();
   const idx = puzzles.findIndex((p: any) => p.id === id);
   if (idx === -1) return res.status(404).json({ error: '题目不存在' });
@@ -72,12 +72,12 @@ editorRouter.put('/puzzles/:id', (req, res) => {
   if (b.author !== undefined) p.author = String(b.author);
 
   writePuzzles(puzzles);
-  // 需要重启服务才能重新加载 base puzzles，但已审核投稿会立即刷新
-  res.json({ ok: true, id, note: 'base puzzle 修改将在服务重启后生效（已审核投稿已即时刷新）' });
+  await manager.initBasePuzzles(); // 即时重载
+  return res.json({ ok: true, id });
 });
 
 // DELETE /api/editor/puzzles/:id — 删除一道题目
-editorRouter.delete('/puzzles/:id', (req, res) => {
+editorRouter.delete('/puzzles/:id', async (req, res) => {
   const id = req.params.id;
 
   if (id.startsWith('sub_')) {
@@ -94,7 +94,8 @@ editorRouter.delete('/puzzles/:id', (req, res) => {
   const filtered = puzzles.filter((p: any) => p.id !== id);
   if (filtered.length === puzzles.length) return res.status(404).json({ error: '题目不存在' });
   writePuzzles(filtered);
-  return res.json({ ok: true, note: '删除将在服务重启后生效' });
+  await manager.initBasePuzzles(); // 即时重载
+  return res.json({ ok: true });
 });
 
 // ─── 投稿操作 ───
